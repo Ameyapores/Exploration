@@ -1,2 +1,2 @@
 # Exploration
-Using pretrained models for exploration in Mario environment
+Using Resnet architecture for image procesing instead of Actor-critic
