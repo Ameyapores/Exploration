@@ -1,5 +1,5 @@
 from setup_env import setup_env
-#from model import ActorCritic
+from model2 import exploration
 import os
 import time
 from collections import deque
@@ -10,12 +10,9 @@ import cv2
 from itertools import count
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
-import torchvision.models as models
-from new_model2 import Resnet
 
 def ensure_shared_grads(model, shared_model):
     for param, shared_param in zip(model.parameters(),
@@ -24,25 +21,27 @@ def ensure_shared_grads(model, shared_model):
             return
         shared_param._grad = param.grad
 
-#prepro = lambda img: imresize(img, (224,224)).astype(np.int32)
+#prepro = lambda img: imresize(img[0:84].mean(2), (84,84)).astype(np.float32).reshape(1,84,84)/255.
 
 def train(rank, args, shared_model, counter, lock, optimizer=None, select_sample=True):
 
     FloatTensor = torch.cuda.FloatTensor if args.use_cuda else torch.FloatTensor
 
     env = setup_env(args.env_name)
-    model = Resnet(1, env.action_space.n)
+
+    model = exploration(env.observation_space.shape[0], env.action_space.n)
 
     if args.use_cuda:
         model.cuda()
 
     if optimizer is None:
         optimizer = optim.Adam(shared_model.parameters(), lr=args.lr)
+
     model.train()
 
     state= env.reset()
-    state=state.reshape(3, 240, 256)
-    state = torch.from_numpy(state.copy())
+    #print(state)
+    state = torch.from_numpy(state)
 
     done = True
     episode_length = 0
@@ -59,8 +58,6 @@ def train(rank, args, shared_model, counter, lock, optimizer=None, select_sample
             torch.save(shared_model.state_dict(), args.save_path)
         
         model.load_state_dict(shared_model.state_dict())
-        
-        
         if done:
             cx = Variable(torch.zeros(1, 512)).type(FloatTensor)
             hx = Variable(torch.zeros(1, 512)).type(FloatTensor)
@@ -76,7 +73,6 @@ def train(rank, args, shared_model, counter, lock, optimizer=None, select_sample
         for step in range(args.num_steps):
             episode_length += 1            
             state_inp = Variable(state.unsqueeze(0)).type(FloatTensor)
-            #print ('input state size',state_inp.size())
             value, logit, (hx, cx) = model((state_inp, (hx, cx)))
             prob = F.softmax(logit, dim=-1)
             log_prob = F.log_softmax(logit, dim=-1)
@@ -89,7 +85,8 @@ def train(rank, args, shared_model, counter, lock, optimizer=None, select_sample
                 action = prob.max(-1, keepdim=True)[1].data
 
             log_prob = log_prob.gather(-1, Variable(action))
-            action_out = action.cpu()
+            
+            action_out = action.to(torch.device("cpu"))
 
             state, reward, done, _ = env.step(action_out.numpy()[0][0])
             done = done or episode_length >= args.max_episode_length
@@ -101,16 +98,14 @@ def train(rank, args, shared_model, counter, lock, optimizer=None, select_sample
             if done:
                 episode_length = 0
                 #env.change_level(0)
-                state= env.reset()
-                state=state.reshape(3, 240, 256)
-                state = torch.tensor(state.copy())
+                state = env.reset()
                 #print ("Process {} has completed.".format(rank))
-            
-            state= state.reshape(3, 240, 256)
-            state = torch.tensor(state)
+            #print (state)
+            env.locked_levels = [False] + [True] * 31
+            state = torch.from_numpy(state)
             values.append(value)
             log_probs.append(log_prob)
-            rewards.append(reward)
+            rewards.append(0.001* reward)
             
             if done:
                 break
@@ -140,8 +135,6 @@ def train(rank, args, shared_model, counter, lock, optimizer=None, select_sample
                 log_probs[i] * Variable(gae).type(FloatTensor) - args.entropy_coef * entropies[i]
 
         total_loss = policy_loss + args.value_loss_coef * value_loss
-        #print ("Process {} loss :".format(rank), total_loss.data)
-
         optimizer.zero_grad()
 
         (total_loss).backward(retain_graph=True)
@@ -149,23 +142,22 @@ def train(rank, args, shared_model, counter, lock, optimizer=None, select_sample
 
         ensure_shared_grads(model, shared_model)
         optimizer.step()
+    
 
 def test(rank, args, shared_model, counter):
 
     FloatTensor = torch.cuda.FloatTensor if args.use_cuda else torch.FloatTensor
-    env = setup_env(args.env_name)
-    
 
-    model = Resnet(1, env.action_space.n)
-    
+    env = setup_env(args.env_name)
+
+    model = exploration(env.observation_space.shape[0], env.action_space.n)
     if args.use_cuda:
         model.cuda()
-    
     model.eval()
 
     state = env.reset()
-    state=state.reshape(3, 240, 256)
-    state = torch.from_numpy(state.copy())
+
+    state = torch.from_numpy(state)
     reward_sum = 0
     done = True
     savefile = os.getcwd() + '/save/mario_curves.csv'
@@ -192,15 +184,16 @@ def test(rank, args, shared_model, counter):
             with torch.no_grad():
                 cx = Variable(cx.data).type(FloatTensor)
                 hx = Variable(hx.data).type(FloatTensor)
+
         with torch.no_grad():
             state_inp = Variable(state.unsqueeze(0)).type(FloatTensor)
         value, logit, (hx, cx) = model((state_inp, (hx, cx)))
         prob = F.softmax(logit, dim=-1)
         action = prob.max(-1, keepdim=True)[1].data
-        action_out = action.cpu()
+        action_out = action.to(torch.device("cpu"))
 
         state, reward, done, _ = env.step(action_out.numpy()[0][0])
-        #env.render()
+        env.render()
         done = done or episode_length >= args.max_episode_length
         reward_sum += reward
 
@@ -209,6 +202,7 @@ def test(rank, args, shared_model, counter):
             done = True
 
         if done:
+
             print("Time {}, num steps {}, FPS {:.0f}, episode reward {}, episode length {}".format(
                 time.strftime("%Hh %Mm %Ss",
                               time.gmtime(time.time() - start_time)), 
@@ -226,9 +220,7 @@ def test(rank, args, shared_model, counter):
             episode_length = 0
             actions.clear()
             time.sleep(60)
+            env.locked_levels = [False] + [True] * 31
             #env.change_level(0)
-            state =env.reset()
-            state=state.reshape(3, 240, 256)
-            state = torch.from_numpy(state.copy())
-        state= state.reshape(3,240,256)
-        state = torch.tensor(state)
+            state = env.reset()
+        state = torch.from_numpy(state)
