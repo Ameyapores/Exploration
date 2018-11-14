@@ -7,15 +7,17 @@ from .frame_stack_env import FrameStackEnv
 from .normalize_reward_env import NormalizeRewardEnv
 from .penalize_death_env import PenalizeDeathEnv
 from .reward_cache_env import RewardCacheEnv
+from .PytorchImage import PytorchImage
 
 
 def wrap(env,
     cache_rewards=True,
-    #image_size=(84, 84),
+    image_size=(84, 84),
     death_penalty=-15,
     clip_rewards=False,
     normalize_rewards=False,
-    agent_history_length=4
+    agent_history_length=4,
+    pytorch_img= False
 ):
     """
     Wrap an environment with standard wrappers.
@@ -37,8 +39,8 @@ def wrap(env,
     if cache_rewards:
         env = RewardCacheEnv(env)
     # apply a down-sampler for the given game
-    #if image_size is not None:
-    #    env = DownsampleEnv(env, image_size)
+    if image_size is not None:
+        env = DownsampleEnv(env, image_size)
     # apply the death penalty feature if enabled
     if death_penalty is not None:
         env = PenalizeDeathEnv(env, penalty=death_penalty)
@@ -51,7 +53,8 @@ def wrap(env,
     # apply the back history of frames if the feature is enabled
     if agent_history_length is not None:
         env = FrameStackEnv(env, agent_history_length)
-
+    if pytorch_img:
+        env = PytorchImage(env)
     return env
 
 
@@ -59,10 +62,11 @@ def wrap(env,
 __all__ = [
     BinarySpaceToDiscreteSpaceEnv.__name__,
     ClipRewardEnv.__name__,
-    #DownsampleEnv.__name__,
+    DownsampleEnv.__name__,
     FrameStackEnv.__name__,
     NormalizeRewardEnv.__name__,
     PenalizeDeathEnv.__name__,
     RewardCacheEnv.__name__,
+    PytorchImage.__name__,
     wrap.__name__,
 ]
