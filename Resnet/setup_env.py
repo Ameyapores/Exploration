@@ -1,16 +1,15 @@
 import gym
-from wrapper import BinarySpaceToDiscreteSpaceEnv, wrap as nes_py_wrap
-from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
+from wrappers import BinarySpaceToDiscreteSpaceEnv, wrap as nes_py_wrap
+from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
 import gym_super_mario_bros
 import numpy as np
-import torch
 
 def setup_env(env_id: str) -> gym.Env:
     env = gym_super_mario_bros.make(env_id)
-    env = BinarySpaceToDiscreteSpaceEnv(env, SIMPLE_MOVEMENT)
+    env = BinarySpaceToDiscreteSpaceEnv(env, COMPLEX_MOVEMENT)
     #print(env.observation_space, env.action_space)
-    env = nes_py_wrap(env, death_penalty= -1 , agent_history_length = 4, pytorch_img= True)
-    #print(env.observation_space.shape[0], env.action_space)
+    env = nes_py_wrap(env, death_penalty= -1)
+    #print(env.observation_space, env.action_space)
     #a= np.zeros(env.observation_space.shape)
     #print(a)
     return env

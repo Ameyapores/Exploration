@@ -1,115 +1,67 @@
-import torch.nn as nn
+import numpy as np
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
-def conv3x3(in_planes, out_planes, stride=1):
-    """3x3 convolution with padding"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=1, bias=False)
+def normalized_columns_initializer(weights, std=1.0):
+    out = torch.randn(weights.size())
+    out *= std / torch.sqrt(out.pow(2).sum(1, keepdim=True))
+    return out
 
 
-def conv1x1(in_planes, out_planes, stride=1):
-    """1x1 convolution"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        weight_shape = list(m.weight.data.size())
+        fan_in = np.prod(weight_shape[1:4])
+        fan_out = np.prod(weight_shape[2:4]) * weight_shape[0]
+        w_bound = np.sqrt(6. / (fan_in + fan_out))
+        m.weight.data.uniform_(-w_bound, w_bound)
+        m.bias.data.fill_(0)
+    elif classname.find('Linear') != -1:
+        weight_shape = list(m.weight.data.size())
+        fan_in = weight_shape[1]
+        fan_out = weight_shape[0]
+        w_bound = np.sqrt(6. / (fan_in + fan_out))
+        m.weight.data.uniform_(-w_bound, w_bound)
+        m.bias.data.fill_(0)
 
-class BasicBlock(nn.Module):
-    expansion = 1
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None):
-        super(BasicBlock, self).__init__()
-        self.conv1 = conv3x3(inplanes, planes, stride)
-        self.bn1 = nn.BatchNorm2d(planes)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3(planes, planes)
-        self.bn2 = nn.BatchNorm2d(planes)
-        self.downsample = downsample
-        self.stride = stride
+class ActorCritic(torch.nn.Module):
+    def __init__(self, num_inputs, num_actions):
+        super(ActorCritic, self).__init__()
+        self.conv1 = nn.Conv2d(num_inputs, 32, 3, stride=2, padding=1)
+        self.conv2 = nn.Conv2d(32, 32, 3, stride=2, padding=1)
+        self.conv3 = nn.Conv2d(32, 32, 3, stride=2, padding=1)
+        self.conv4 = nn.Conv2d(32, 32, 3, stride=2, padding=1)
 
-    def forward(self, x):
-        residual = x
+        self.lstm = nn.LSTMCell(1152, 512)
 
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
+        self.critic_linear = nn.Linear(512, 1)
+        self.actor_linear = nn.Linear(512, num_actions)
 
-        out = self.conv2(out)
-        out = self.bn2(out)
+        self.apply(weights_init)
+        self.actor_linear.weight.data = normalized_columns_initializer(
+            self.actor_linear.weight.data, 0.01)
+        self.actor_linear.bias.data.fill_(0)
+        self.critic_linear.weight.data = normalized_columns_initializer(
+            self.critic_linear.weight.data, 1.0)
+        self.critic_linear.bias.data.fill_(0)
 
-        if self.downsample is not None:
-            residual = self.downsample(x)
+        self.lstm.bias_ih.data.fill_(0)
+        self.lstm.bias_hh.data.fill_(0)
 
-        out += residual
-        out = self.relu(out)
+        self.train()
 
-        return out
+    def forward(self, inputs):
+        inputs, (hx, cx) = inputs
+        x = F.elu(self.conv1(inputs))
+        x = F.elu(self.conv2(x))
+        x = F.elu(self.conv3(x))
+        x = F.elu(self.conv4(x))
+        #print (x.size())
+        x = x.view(-1, 32 * 6 * 6)
+        hx, cx = self.lstm(x, (hx, cx))
+        x = hx
 
-class ResNet(nn.Module):
-
-    def __init__(self, num_inputs, block, layers, num_classes=1000):
-        super(ResNet, self).__init__()
-        self.inplanes = 64
-        self.conv1 = nn.Conv2d(num_inputs, 64, kernel_size=7, stride=2, padding=3,
-                               bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc = nn.Linear(512 * block.expansion, num_classes)
-
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-            elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-
-    def _make_layer(self, block, planes, blocks, stride=1):
-        downsample = None
-        if stride != 1 or self.inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
-                conv1x1(self.inplanes, planes * block.expansion, stride),
-                nn.BatchNorm2d(planes * block.expansion),
-            )
-
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
-        self.inplanes = planes * block.expansion
-        for _ in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
-
-        return nn.Sequential(*layers)
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
-
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-
-        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
-
-        return x
-
-def resnet18(num_inputs, pretrained=False, **kwargs):
-    """Constructs a ResNet-18 model.
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    model = ResNet(num_inputs, BasicBlock, [1, 1, 1, 1], **kwargs)
-    return model
-
-'''model = resnet18(num_inputs= 1)
-x = torch.randn(1, 84, 84)
-x.unsqueeze_(0)
-print (x.shape)
-out = model(x)
-print (out.shape)'''
+        return self.critic_linear(x), self.actor_linear(x), (hx, cx)

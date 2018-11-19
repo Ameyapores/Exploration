@@ -1,13 +1,13 @@
-from model import resnet18
+from model_resnet import resnet_new
 import torch.nn as nn
 
-class exploration(nn.Module):
+class ActorCritic(nn.Module):
     def __init__(self, num_inputs, num_actions):
-        super(exploration, self).__init__()
-        resnet = resnet18(num_inputs, pretrained=False)
-        modules = list(resnet.children())[:-1]
-        self.resnet = nn.Sequential(*modules)
-        self.lstm = nn.LSTMCell(512, 512)
+        super(ActorCritic, self).__init__()
+        self.resnet = resnet_new(num_inputs, pretrained=False)
+        #modules = list(resnet.children())[:-1]
+        #self.resnet = nn.Sequential(*modules)
+        self.lstm = nn.LSTMCell(2304, 512)
         self.critic_linear = nn.Linear(512, 1)
         self.actor_linear = nn.Linear(512, num_actions)
 
@@ -15,7 +15,7 @@ class exploration(nn.Module):
         inputs, (hx, cx) = inputs
         features = self.resnet(inputs)
         #print (features.size())
-        features = features.view(-1, 512)
+        features = features.view(-1, 2304)
         hx, cx = self.lstm(features, (hx, cx))
         x = hx
         return self.critic_linear(x), self.actor_linear(x), (hx, cx)

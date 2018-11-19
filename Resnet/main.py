@@ -5,12 +5,12 @@ import numpy as np
 import torch
 import torch.cuda
 import torch.multiprocessing as _mp
-import torch.nn as nn
-from setup_env import setup_env
 
+from setup_env import setup_env
+from model2 import ActorCritic
 from shared_adam import SharedAdam
 from Train import train, test
-from model2 import exploration
+
 SAVEPATH = os.getcwd() + '/save/mario_a3c_params.pkl'
 
 parser = argparse.ArgumentParser(description='A3C')
@@ -38,7 +38,7 @@ parser.add_argument('--env-name', default='SuperMarioBros-1-1-v0',
                     help='environment to train on (default: SuperMarioBros-1-4-v0)')
 parser.add_argument('--no-shared', default=False,
                     help='use an optimizer without shared momentum.')
-parser.add_argument('--use-cuda',default=False,
+parser.add_argument('--use-cuda',default=True,
                     help='run on gpu.')
 parser.add_argument('--save-interval', type=int, default=100,
                     help='model save interval (default: 10)')
@@ -57,8 +57,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     env = setup_env(args.env_name)
 
-    shared_model= exploration(env.observation_space.shape[0], env.action_space.n)
-
+    shared_model = ActorCritic(1, env.action_space.n)
     if args.use_cuda:
         shared_model.cuda()
 
@@ -68,7 +67,7 @@ if __name__ == '__main__':
         #print('Loading A3C parametets ...')
         shared_model.load_state_dict(torch.load(args.save_path))
 
-    optimizer = SharedAdam(filter(lambda p: p.requires_grad, shared_model.parameters()), lr=args.lr)
+    optimizer = SharedAdam(shared_model.parameters(), lr=args.lr)
     optimizer.share_memory()
 
     print ("No of available cores : {}".format(mp.cpu_count())) 
