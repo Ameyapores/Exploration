@@ -10,11 +10,14 @@ class DownsampleEnv(gym.ObservationWrapper):
     def __init__(self, env, image_size):
         """
         Create a new down-sampler.
+
         Args:
             env (gym.Env): the environment to wrap
             image_size (tuple): the size to output frames as (width X height)
+
         Returns:
             None
+
         """
         super(DownsampleEnv, self).__init__(env)
         self._image_size = image_size
@@ -29,10 +32,13 @@ class DownsampleEnv(gym.ObservationWrapper):
     def observation(self, frame):
         """
         Downsample an observation from RGB to gray scale and resize it
+
         Args:
             frame (numpy.ndarray): the image to convert to grayscale and resize
+
         Returns:
             (numpy.ndarray) the frame in B&W and resized to self._image_size
+
         """
         # convert the frame from RGB to gray scale
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)

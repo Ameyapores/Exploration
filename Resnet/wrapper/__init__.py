@@ -9,7 +9,6 @@ from .penalize_death_env import PenalizeDeathEnv
 from .reward_cache_env import RewardCacheEnv
 from .PytorchImage import PytorchImage
 
-
 def wrap(env,
     cache_rewards=True,
     image_size=(84, 84),
