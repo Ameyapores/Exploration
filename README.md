@@ -8,6 +8,8 @@ Actor-Critic models are a popular form of Policy Gradient model. Customized acto
   <img src="imgs/figure1.png" width="350" title="hover text"> 
   <em> Fig-1.(a) A3C is highly compatible with parallel processing. There is a global network which shares its parameter with the worker network. These worker networks update the global network asynchronously.</em>
 </p>
+
+
 <p align="center">
   <img src="imgs/figure2.png" width="500" alt="accessibility text">
   <em> Fig-1.(b) Diagram of a customized Actor-critic architecture</em>
