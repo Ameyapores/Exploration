@@ -5,10 +5,12 @@ To use a deeper neural network for feature extraction in an actor-critic algorit
 ### Background
 Actor-Critic models are a popular form of Policy Gradient model. Customized actor-critic methods use a smaller version of the convolution neural network. Actor-critic uses two neural network- (a) Critic- that measures how good the action taken is (value-based) and (b) an Actor that controls how our agent behaves (policy-based).
 <p align="center">
-  <img src="imgs/figure1.png" width="350" title="hover text"> 
-  <em> Fig-1.(a) A3C is highly compatible with parallel processing. There is a global network which shares its parameter with the worker network. These worker networks update the global network asynchronously.</em>
+<img src="imgs/figure1.png" width="350" title="hover text"> 
 </p>
 
+<p align="center">
+<em> Fig-1.(a) A3C is highly compatible with parallel processing. There is a global network which shares its parameter with the worker network. These worker networks update the global network asynchronously.</em>
+</p>
 
 <p align="center">
 <img src="imgs/figure2.png" width="500" alt="accessibility text">
@@ -17,6 +19,7 @@ Actor-Critic models are a popular form of Policy Gradient model. Customized acto
 <p align="center">
 <em> Fig-1.(b) Diagram of a customized Actor-critic architecture</em>
 </p>
+
 Customized A3C architecture passes the input state st through a sequence of four convolution layers with 32 filters each, a kernel size of 3x3, a stride of 2 and padding of 1. An exponential
 linear unit (ELU) is used after each convolution layer. The output of the last convolution layer is fed into an LSTM with 256 units. Two separate fully connected layers are used to predict the value function and the action from the LSTM feature representation.
 
