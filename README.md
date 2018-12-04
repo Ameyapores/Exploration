@@ -34,9 +34,9 @@ First, the input state (st) is passed through 2 convolution layers with 32 filte
 
 <img src="imgs/figure3.png"> 
 
-<p align="center">
+'''<p align="center">
 <em> Fig-2. (a) This residual type network has been derived from the state-of-the-art Resnet-18 (which has 18 residual layers). (b) Customized plain network</em>
-</p>
+</p>'''
 
 Residual networks utilize skip connections to jump over some layers. One motivation for skipping over layers in ANNs is to avoid the problem of vanishing gradients by reusing activations from a previous layer until the layer next to the current one has learned its weights. During training, the weights will adapt to mute the previous layer and amplify the layer next to the current. The intuition on why this works is that the neural network collapses into fewer layers in the initial phase, which makes it easier to learn, and thus gradually expands the layers as it learns more of the feature space.
 
