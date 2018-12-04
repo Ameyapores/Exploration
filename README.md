@@ -37,7 +37,7 @@ Residual networks utilize skip connections to jump over some layers. One motivat
 
 ### Results
 <p align="center">
-<img src="imgs/Figure_9.png" width="500" alt="accessibility text">
+<img src="imgs/Figure_10.png" width="500" alt="accessibility text">
 </p>
 
 <p align="center">
