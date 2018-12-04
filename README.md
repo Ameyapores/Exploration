@@ -25,3 +25,18 @@ linear unit (ELU) is used after each convolution layer. The output of the last c
 
 In this study, we hypothesize that using deeper convolution networks would extract higher-level features resulting in better performance and an increase in the average reward per episode.
 
+### Experiment
+
+Here, we use the following architecture for feature extraction. The reward the agent receives is its distance from the flag and the time left to end the game. The aim is to reach the end flag faster.
+
+### Architecture
+First, the input state (st) is passed through 2 convolution layers with 32 filters each, a kernel size of 3x3, a stride of 2 and padding of 1. The output is passed through the following residual layers.
+
+<p align="center">
+<img src="imgs/figure3.png" height="500" title="hover text"> 
+</p>
+
+<p align="center">
+<em> Fig-1.(a) A3C is highly compatible with parallel processing. There is a global network which shares its parameter with the worker network. These worker networks update the global network asynchronously.</em>
+</p>
+
