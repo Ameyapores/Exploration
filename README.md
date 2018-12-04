@@ -12,9 +12,9 @@ Actor-Critic models are a popular form of Policy Gradient model. Customized acto
 
 <p align="center">
 <img src="imgs/figure2.png" width="500" alt="accessibility text">
-</p>
 <em> Fig-1.(b) Diagram of a customized Actor-critic architecture</em>
 
+</p>
 
 Customized A3C architecture passes the input state st through a sequence of four convolution layers with 32 filters each, a kernel size of 3x3, a stride of 2 and padding of 1. An exponential
 linear unit (ELU) is used after each convolution layer. The output of the last convolution layer is fed into an LSTM with 256 units. Two separate fully connected layers are used to predict the value function and the action from the LSTM feature representation.
