@@ -6,7 +6,7 @@ To use a deeper neural network for feature extraction in an actor-critic algorit
 Actor-Critic models are a popular form of Policy Gradient model. Customized actor-critic methods use a smaller version of the convolution neural network. Actor-critic uses two neural network- (a) Critic- that measures how good the action taken is (value-based) and (b) an Actor that controls how our agent behaves (policy-based).
 <p align="center">
 <img src="imgs/figure1.png" width="350" title="hover text"> 
-<em>image_caption</em>
+<em> Fig-1.(a) A3C is highly compatible with parallel processing. There is a global network which shares its parameter with the worker network. These worker networks update the global network asynchronously.</em>
 <img src="imgs/figure2.png" width="500" alt="accessibility text">
 </p>
 
