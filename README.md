@@ -55,7 +55,7 @@ Residual networks utilize skip connections to jump over some layers. One motivat
 Fig-3(a) implies that there is an initial exploration rise for Reset-type architecture, however, in long-term, it is unable to fetch more rewards compared to traditional actor-critic. Fig-3(b) shows the number of steps it takes for each algorithm to reach the end-flags. Astonishingly the resnet-type architecture reaches the end flag much earlier relative to the older algorithm, however, it is unable to reach the flag in the subsequent episodes. Whereas, in the case of the customised network, the agent is able to reach the end flag in about 4.3M frames but it reaches the flag subsequently thereafter. 
 
 ### Discussion
-One of the reasons to speculate for the above-mentioned results for the network to not be able to generalise to subsequent episodes ones it has reached the flag in case of resnet type architecture is the increase in the number of parameters to optimise.
+One of the reasons to speculate the above-mentioned results for the network to not be able to generalise to subsequent episodes ones it has reached the flag in case of resnet type architecture is the increase in the number of parameters to optimise.
 
 ## Prerequisites
 - Python3.5+
